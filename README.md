@@ -35,7 +35,7 @@ The programs may require various Python packages. Install them using:
 make
 ```
 
-The setup the virtual environment:
+Then setup the virtual environment:
 
 ```bash
 source ./venv/bin/activate
