@@ -106,8 +106,9 @@ if __name__ == "__main__":
     print(f"Reconstructed secret: {reconstructed_secret}")
 
     # Reconstruct with more than 'threshold' number of shares
-    reconstructed_secret = reconstruct_secret(shares[:4], prime)
-    print(f"Reconstructed secret (with 4 shares): {reconstructed_secret}")
+    num_of_available_shares = 3
+    reconstructed_secret = reconstruct_secret(shares[:num_of_available_shares], prime)
+    print(f"Reconstructed secret (with {num_of_available_shares} shares): {reconstructed_secret}")
 
     # Attempt to reconstruct with fewer than 'threshold' number of shares
     try:
