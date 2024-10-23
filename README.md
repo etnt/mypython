@@ -26,6 +26,11 @@ Various examples of Python decorators including timing, logging, and function re
 ### 7. FastAPI Server (api_server.py)
 A simple REST API server implementation using FastAPI framework.
 
+### 8. Python Dataclasses (using_dataclasses.py)
+A comprehensive guide to Python's dataclasses, demonstrating how to use the @dataclasses.dataclass decorator for simplified class creation with automatic method generation, customization options, and best practices.
+
+### 9. Type Inference System (type_system.py)
+An educational implementation of the Hindley-Milner type inference system, demonstrating how programming language type systems work. Includes polymorphic type inference, unification, and type checking with detailed documentation explaining core concepts.
 
 ## Requirements
 
