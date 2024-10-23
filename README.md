@@ -1,6 +1,7 @@
 # Python Learning Experiments
 
-This repository contains a collection of small Python programs that demonstrate various programming concepts and techniques. Each program is self-contained and serves as a learning experiment for different aspects of Python programming.
+This repository contains a collection of small Python programs that demonstrate various programming concepts and techniques.
+Each program is self-contained and serves as a learning experiment for different aspects of Python programming.
 
 ## Programs
 
@@ -25,6 +26,21 @@ Various examples of Python decorators including timing, logging, and function re
 ### 7. FastAPI Server (api_server.py)
 A simple REST API server implementation using FastAPI framework.
 
+
+## Requirements
+
+The programs may require various Python packages. Install them using:
+
+```bash
+make
+```
+
+The setup the virtual environment:
+
+```bash
+source ./venv/bin/activate
+```
+
 ## Usage
 
 Each program can be run independently. Most programs include example usage in their source code or can be run directly:
@@ -32,15 +48,3 @@ Each program can be run independently. Most programs include example usage in th
 ```bash
 python3 <program_name>.py
 ```
-
-## Requirements
-
-The programs may require various Python packages. Install them using:
-
-```bash
-pip install -r requirements.txt
-```
-
-## Purpose
-
-These programs serve as educational examples and experiments for learning different Python programming concepts, algorithms, and libraries. They are meant to be clear, well-documented examples that others can learn from.
