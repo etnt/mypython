@@ -353,6 +353,7 @@ def execute_ast(ast, verbose=False):
     """
     # Compile AST to instructions
     instructions = compile_ast(ast, {}, 0, verbose)
+    print(f"SECD instructions: {instructions}")
 
     # Create and run SECD machine
     machine = SECDMachine(verbose)
