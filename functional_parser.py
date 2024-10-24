@@ -40,6 +40,7 @@ from type_system import (
     Var, Int, Function, Apply, Let, BinOp,
     infer_j, Forall, IntType
 )
+from core_erlang_generator import generate_core_erlang
 
 class FunctionalParser:
     """
@@ -244,6 +245,7 @@ def main():
     arg_parser = argparse.ArgumentParser(description='Parse and type-check functional programming expressions.')
     arg_parser.add_argument('expression', nargs='?', help='Expression to parse and type-check')
     arg_parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
+    arg_parser.add_argument('-o', '--output', default="mfl.core", help='Output file name')
     args = arg_parser.parse_args()
 
     parser = FunctionalParser([], {}, verbose=args.verbose)  # Grammar rules handled in reduction methods
@@ -260,8 +262,18 @@ def main():
             try:
                 expr_type = infer_j(ast, type_ctx)
                 print(f"Inferred type: {expr_type}")
+
+                # Generate Core Erlang code
+                core_erlang = generate_core_erlang(ast, expr_type)
+                if args.verbose:
+                    print("\nGenerated Core Erlang code:")
+                    print(core_erlang)
+                # Write the generated code to file
+                with open(args.output, "w") as f:
+                    f.write(core_erlang)
+                print(f"Output written to: {args.output} ,compile to BEAM as: erlc +from_core {args.output}")
             except Exception as e:
-                print(f"Type error: {str(e)}")
+                print(f"Error during type checking/code generation: {str(e)}")
 
         except ValueError as e:
             print(f"Parse error: {str(e)}")
