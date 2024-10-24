@@ -68,4 +68,11 @@ Successfully parsed!
 AST: let double = λx.(x * 2) in (double 21)
 AST(raw): Let(Var("double"), Function(Var("x"), BinOp("*", Var("x"), Int(2))), Apply(Var("double"), Int(21)))
 Inferred type: int
+Output written to: mfl.core ,compile to BEAM as: erlc +from_core mfl.core
+
+❯ erlc +from_core mfl.core
+
+❯ erl
+1> mfl:main().
+42
 ```
