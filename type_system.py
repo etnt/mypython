@@ -256,8 +256,26 @@ def infer_j(expr, ctx: Dict[str, Forall]) -> MonoType:
 # Expression Classes
 # These classes represent the abstract syntax tree of our simple language
 
+class ASTNode:
+    """Base class for all AST nodes with raw structure printing capability"""
+    def raw_structure(self):
+        """Return the raw AST structure as a string"""
+        if isinstance(self, Var):
+            return f'Var("{self.name}")'
+        elif isinstance(self, Int):
+            return f'Int({self.value})'
+        elif isinstance(self, Function):
+            return f'Function({self.arg.raw_structure()}, {self.body.raw_structure()})'
+        elif isinstance(self, Apply):
+            return f'Apply({self.func.raw_structure()}, {self.arg.raw_structure()})'
+        elif isinstance(self, Let):
+            return f'Let({self.name.raw_structure()}, {self.value.raw_structure()}, {self.body.raw_structure()})'
+        elif isinstance(self, BinOp):
+            return f'BinOp("{self.op}", {self.left.raw_structure()}, {self.right.raw_structure()})'
+        return str(self)
+
 @dataclasses.dataclass
-class Var:
+class Var(ASTNode):
     """
     Represents a variable reference in the program.
     Example: x
@@ -268,7 +286,7 @@ class Var:
         return self.name
 
 @dataclasses.dataclass
-class Int:
+class Int(ASTNode):
     """
     Represents an integer literal.
     Example: 42
@@ -279,7 +297,7 @@ class Int:
         return str(self.value)
 
 @dataclasses.dataclass
-class Function:
+class Function(ASTNode):
     """
     Represents a lambda function.
     Example: λx.x (the identity function)
@@ -291,7 +309,7 @@ class Function:
         return f"λ{self.arg}.{self.body}"
 
 @dataclasses.dataclass
-class Apply:
+class Apply(ASTNode):
     """
     Represents function application.
     Example: (f x) applies function f to argument x
@@ -303,7 +321,7 @@ class Apply:
         return f"({self.func} {self.arg})"
 
 @dataclasses.dataclass
-class Let:
+class Let(ASTNode):
     """
     Represents let bindings.
     Example: let x = e1 in e2
@@ -317,7 +335,7 @@ class Let:
         return f"let {self.name} = {self.value} in {self.body}"
 
 @dataclasses.dataclass
-class BinOp:
+class BinOp(ASTNode):
     """
     Represents binary arithmetic operations (+, -, *, /).
     Example: x + y
@@ -357,6 +375,8 @@ def test_var():
     expr = Var("x")
     inferred_type = infer_j(expr, ctx)
     print(f"Variable 'x': {expr}")
+    print(f"Raw AST structure: {expr.raw_structure()}")
+    print(expr)
     print(f"Inferred type: {inferred_type}\n")
 
 def test_int():
@@ -365,6 +385,7 @@ def test_int():
     expr = Int(42)
     inferred_type = infer_j(expr, ctx)
     print(f"Integer literal: {expr}")
+    print(f"Raw AST structure: {expr.raw_structure()}")
     print(f"Inferred type: {inferred_type}\n")
 
 def test_identity_function():
@@ -377,6 +398,7 @@ def test_identity_function():
     expr = Function(Var("x"), Var("x"))  # λx.x
     inferred_type = infer_j(expr, ctx)
     print(f"Identity function: {expr}")
+    print(f"Raw AST structure: {expr.raw_structure()}")
     print(f"Inferred type: {inferred_type}\n")
 
 def test_function_application():
@@ -389,6 +411,7 @@ def test_function_application():
     expr = Apply(func, Int(42))  # (λx.x)(42)
     inferred_type = infer_j(expr, ctx)
     print(f"Function application: {expr}")
+    print(f"Raw AST structure: {expr.raw_structure()}")
     print(f"Inferred type: {inferred_type}\n")
 
 def test_let_binding():
@@ -400,7 +423,9 @@ def test_let_binding():
     expr = Let(Var("id"), Function(Var("x"), Var("x")), Apply(Var("id"), Int(42)))
     inferred_type = infer_j(expr, ctx)
     print(f"Let binding: {expr}")
+    print(f"Raw AST structure: {expr.raw_structure()}")
     print(f"Inferred type: {inferred_type}\n")
+    
 
 def test_arithmetic():
     """
@@ -412,6 +437,7 @@ def test_arithmetic():
     expr1 = BinOp("+", Int(5), Int(3))
     type1 = infer_j(expr1, ctx)
     print(f"Addition: {expr1}")
+    print(f"Raw AST structure: {expr1.raw_structure()}")
     print(f"Inferred type: {type1}\n")
 
     # Test multiplication with a more complex expression
@@ -420,13 +446,28 @@ def test_arithmetic():
                   BinOp("-", Int(10), Int(5)))
     type2 = infer_j(expr2, ctx)
     print(f"Complex arithmetic: {expr2}")
+    print(f"Raw AST structure: {expr2.raw_structure()}")
     print(f"Inferred type: {type2}\n")
 
     # Test division
     expr3 = BinOp("/", Int(10), Int(2))
     type3 = infer_j(expr3, ctx)
     print(f"Division: {expr3}")
+    print(f"Raw AST structure: {expr3.raw_structure()}")
     print(f"Inferred type: {type3}\n")
+
+def test_double():
+    """
+    Test type inference for let and λ bindings with double application.
+    This demonstrates how we can bind the identity function and use it.
+    """
+    ctx = {}
+    # let double = λx.x*2 in (double 21)
+    expr = Let(Var("double"), Function(Var("x"), BinOp("*", Var("x"), Int(2))), Apply(Var("double"), Int(21)))
+    inferred_type = infer_j(expr, ctx)
+    print(f"Let binding: {expr}")
+    print(f"Raw AST structure: {expr.raw_structure()}")
+    print(f"Inferred type: {inferred_type}\n")
 
 if __name__ == "__main__":
     # Run all test cases
@@ -437,3 +478,4 @@ if __name__ == "__main__":
     test_function_application()
     test_let_binding()
     test_arithmetic()
+    test_double()
