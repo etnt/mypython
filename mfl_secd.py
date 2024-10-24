@@ -9,6 +9,13 @@ E (Environment): Stores variable bindings
 C (Control): Contains the sequence of instructions to be executed
 D (Dump): Used to save/restore machine state during function calls
 
+The machine executes instructions one by one, modifying the S, E, C, and D components
+as needed. A function call pushes the current state onto the D, sets up a new
+environment E, and continues execution with the function's code in C.
+A function return, pops a state from D, restoring the previous environment and
+continuing execution. The process continues until C is empty. The final result
+is usually found on the top of the stack S.
+
 Instructions:
 - NIL: Push empty list onto stack
 - LDC: Load constant onto stack
@@ -113,6 +120,8 @@ class SECDMachine:
         self.debug_print(f"\nExecuting: {op} {arg if arg else ''}")
         self.debug_print(f"Stack before: {self.stack}")
         self.debug_print(f"Env before: {self.env}")
+        self.debug_print(f"Control before: {self.control}")
+        self.debug_print(f"Dump before: {self.dump}")
 
         if op == "NIL":
             # Push empty list onto stack
@@ -242,26 +251,30 @@ def compile_ast(ast, env_map=None, level=0, verbose=False):
     if env_map is None:
         env_map = {}
 
-    # print(f"\nCompiling node: {type(ast).__name__}")
-    # print(f"Current env_map: {env_map}")
-    # print(f"Current level: {level}")
+    if verbose:
+        print(f"\nCompiling node: {type(ast).__name__}")
+        print(f"Current env_map: {env_map}")
+        print(f"Current level: {level}")
 
     if isinstance(ast, Int):
+        # Load constant onto stack
         return [("LDC", ast.value)]
 
     elif isinstance(ast, Bool):
+        # Load constant onto stack
         return [("LDC", ast.value)]
 
     elif isinstance(ast, Var):
         if ast.name not in env_map:
             raise ValueError(f"Unbound variable: {ast.name}")
+        # Load variable value from environment
         return [("LD", env_map[ast.name])]
 
     elif isinstance(ast, Function):
         # Create new environment for function body
         new_env_map = env_map.copy()
         param_idx = 0
-        
+
         if verbose:
             print(f"Function AST: {ast}")
             print(f"Function AST dir: {dir(ast)}")
@@ -275,12 +288,16 @@ def compile_ast(ast, env_map=None, level=0, verbose=False):
 
         # Compile function body with new environment
         body_code = compile_ast(ast.body, new_env_map, level + 1)
+        # Create closure with function body and add Return instruction
         return [("LDF", body_code + ["RET"])]
 
     elif isinstance(ast, Apply):
         # Compile function and argument
         func_code = compile_ast(ast.func, env_map, level)
         arg_code = compile_ast(ast.arg, env_map, level)
+        # 1. Load argument onto stack
+        # 2. Load function onto stack
+        # 3. Apply function to argument
         return [
             "NIL",
             *arg_code,
@@ -304,6 +321,9 @@ def compile_ast(ast, env_map=None, level=0, verbose=False):
         # Compile body with new binding
         body_code = compile_ast(ast.body, new_env_map, level)
 
+        # 1. Compile the value to be bound
+        # 2. Create new environment frame with binding
+        # 3. Compile the body of the let expression with the new binding
         return [
             *value_code,
             ("LET", bind_idx),  # Create new environment frame with binding
@@ -334,6 +354,7 @@ def compile_ast(ast, env_map=None, level=0, verbose=False):
     elif isinstance(ast, UnaryOp):
         if ast.op == "!":
             expr_code = compile_ast(ast.expr)
+            # Compile expression and apply NOT operation
             return [
                 *expr_code,
                 "NOT"
