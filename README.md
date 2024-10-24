@@ -32,6 +32,9 @@ A comprehensive guide to Python's dataclasses, demonstrating how to use the @dat
 ### 9. Type Inference System (type_system.py)
 An educational implementation of the Hindley-Milner type inference system, demonstrating how programming language type systems work. Includes polymorphic type inference, unification, and type checking with detailed documentation explaining core concepts.
 
+### 10. Functional Language Parser (functional_parser.py)
+A shift-reduce parser for a simple functional programming language that supports lambda abstractions, function applications, let bindings, and arithmetic expressions. Integrates with the type inference system to provide static typing for parsed expressions.
+
 ## Requirements
 
 The programs may require various Python packages. Install them using:
