@@ -29,11 +29,14 @@ A simple REST API server implementation using FastAPI framework.
 ### 8. Python Dataclasses (using_dataclasses.py)
 A comprehensive guide to Python's dataclasses, demonstrating how to use the @dataclasses.dataclass decorator for simplified class creation with automatic method generation, customization options, and best practices.
 
-### 9. Type Inference System (type_system.py)
+### 9. MFL - Type Inference System (mfl_type_checker.py)
 An educational implementation of the Hindley-Milner type inference system, demonstrating how programming language type systems work. Includes polymorphic type inference, unification, and type checking with detailed documentation explaining core concepts.
 
-### 10. Functional Language Parser (functional_parser.py)
+### 10. MFL - Parser (mfl__parser.py)
 A shift-reduce parser for a simple functional programming language that supports lambda abstractions, function applications, let bindings, and arithmetic expressions. Integrates with the type inference system to provide static typing for parsed expressions.
+
+### 11. MFL -Generator (mfl_core_erlang_generator.py)
+A code generator that translates parsed and type-checked expressions into Erlang core language code. Supports lambda abstractions, function applications, let bindings, and arithmetic expressions.
 
 ## Requirements
 
@@ -57,13 +60,13 @@ Each program can be run independently. Most programs include example usage in th
 python3 <program_name>.py
 ```
 
-The `functional_parser.py` can be run with an argument or without, where in the latter case it will run the default test cases.
+The `mfl.py` can be run with an argument or without, where in the latter case it will run the default test cases for the parser and type checker.
 It also takes a `-v`/`--verbose` flag to print the parsing steps.
 
 Example:
 
 ```bash
-❯ ./venv/bin/python3 functional_parser.py "let double = λx.(x*2) in (double 21)"
+❯ ./venv/bin/python3 mfl.py "let double = λx.(x*2) in (double 21)"
 Successfully parsed!
 AST: let double = λx.(x * 2) in (double 21)
 AST(raw): Let(Var("double"), Function(Var("x"), BinOp("*", Var("x"), Int(2))), Apply(Var("double"), Int(21)))

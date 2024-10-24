@@ -23,7 +23,7 @@ Example Core Erlang output:
 """
 
 from typing import Any, Dict, List
-from type_system import (
+from mfl_type_checker import (
     Var, Int, Function, Apply, Let, BinOp,
     MonoType, TyCon, TyVar
 )
