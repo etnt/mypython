@@ -45,36 +45,42 @@ def main():
                 print(f"Inferred type: {expr_type}")
 
                 if args.secd:
-                    # Execute using SECD machine
-                    from mfl_secd import execute_ast
-                    result = execute_ast(ast)
-                    print(f"\nSECD machine result: {result}")
-                else:
-                    # Generate Core Erlang code
-                    core_erlang = generate_core_erlang(ast, expr_type)
-                    if args.verbose:
-                        print("\nGenerated Core Erlang code:")
-                        print(core_erlang)
-                    # Write the generated code to file
-                    with open(args.output, "w") as f:
-                        f.write(core_erlang)
-                    print(f"Output written to: {args.output} ,compiling to BEAM as: erlc +from_core {args.output}")
                     try:
-                        # Use shlex.quote to safely handle filenames with spaces or special characters
-                        command = shlex.split(f"erlc +from_core {shlex.quote(args.output)}")
-                        result = subprocess.run(command, capture_output=True, text=True, check=True)
-                        print("Compilation successful!")
-                        print(result.stdout)  # Print compilation output (if any)
-                    except subprocess.CalledProcessError as e:
-                        print(f"Error compiling with erlc: {e}")
-                        print(f"Return code: {e.returncode}")
-                        print(f"Stdout: {e.stdout}")
-                        print(f"Stderr: {e.stderr}")
-                    except FileNotFoundError:
-                        print("Error: erlc command not found. Make sure it's in your PATH.")
+                        # Execute using SECD machine
+                        from mfl_secd import execute_ast
+                        result = execute_ast(ast)
+                        print(f"\nSECD machine result: {result}")
+                    except Exception as e:
+                        print(f"Error executing with SECD machine: {e}")
+                else:
+                    try:
+                        # Generate Core Erlang code
+                        core_erlang = generate_core_erlang(ast, expr_type)
+                        if args.verbose:
+                            print("\nGenerated Core Erlang code:")
+                            print(core_erlang)
+                        # Write the generated code to file
+                        with open(args.output, "w") as f:
+                            f.write(core_erlang)
+                        print(f"Output written to: {args.output} ,compiling to BEAM as: erlc +from_core {args.output}")
+                        try:
+                            # Use shlex.quote to safely handle filenames with spaces or special characters
+                            command = shlex.split(f"erlc +from_core {shlex.quote(args.output)}")
+                            result = subprocess.run(command, capture_output=True, text=True, check=True)
+                            print("Compilation successful!")
+                            print(result.stdout)  # Print compilation output (if any)
+                        except subprocess.CalledProcessError as e:
+                            print(f"Error compiling with erlc: {e}")
+                            print(f"Return code: {e.returncode}")
+                            print(f"Stdout: {e.stdout}")
+                            print(f"Stderr: {e.stderr}")
+                        except FileNotFoundError:
+                            print("Error: erlc command not found. Make sure it's in your PATH.")
+                    except Exception as e:
+                        print(f"Error during code generation: {str(e)}")
 
             except Exception as e:
-                print(f"Error during type checking/code generation: {str(e)}")
+                print(f"Error during type checking: {str(e)}")
 
         except ValueError as e:
             print(f"Parse error: {str(e)}")
