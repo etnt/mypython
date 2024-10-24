@@ -64,7 +64,15 @@ def main():
             "let id = λx.x in (id 42)",
             "(2 + 3)",
             "let x = 5 in (x * 3)",
-            "let double = λx.(x*2) in (double 21)"
+            "let double = λx.(x*2) in (double 21)",
+            "(!True)",
+            "(!False)",
+            "(True & True)",
+            "(False | False)",
+            "(True | True)",
+            "(False & False)",
+            "let x = True in (x & False)",
+            "let y = False in (!y)"
         ]
 
         print("No expression provided. Running test cases...")

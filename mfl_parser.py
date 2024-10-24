@@ -4,20 +4,24 @@ A Shift-Reduce Parser for a simple functional programming language.
 This parser implements a bottom-up parsing strategy for parsing functional programming
 constructs including:
 - Integer literals
+- Boolean literals
 - Variables
 - Lambda abstractions
 - Function applications
 - Let bindings
 - Arithmetic expressions
+- Boolean expressions
 
 Grammar Rules:
     Program -> Expr
     Expr    -> INT_LITERAL
+             | BOOL_LITERAL
              | IDENTIFIER
              | Lambda
              | Apply
              | Let
              | ArithExpr
+             | BoolExpr
              | ( Expr )
 
     Lambda  -> λ IDENTIFIER . Expr
@@ -27,17 +31,20 @@ Grammar Rules:
                 | Expr - Expr
                 | Expr * Expr
                 | Expr / Expr
+    BoolExpr -> Expr & Expr
+              | Expr | Expr
+              | ! Expr
 
 Example Usage:
     from functional_parser import FunctionalParser
     parser = FunctionalParser([], {})
-    ast = parser.parse("let id = λx.x in (id 42)")
+    ast = parser.parse("let id = λx.x in (id True)")
 """
 
 from typing import List, Dict, Any
 from mfl_type_checker import (
-    Var, Int, Function, Apply, Let, BinOp,
-    infer_j, Forall, IntType
+    Var, Int, Bool, Function, Apply, Let, BinOp, UnaryOp,
+    infer_j, Forall, IntType, BoolType
 )
 
 class FunctionalParser:
@@ -63,7 +70,7 @@ class FunctionalParser:
         Handles special characters and whitespace.
         """
         # Replace special characters with padded spaces
-        for char in "()λ.=+*/-":
+        for char in "()λ.=+*/-&|!":
             input_str = input_str.replace(char, f" {char} ")
 
         # Split and filter out empty tokens
@@ -78,19 +85,26 @@ class FunctionalParser:
 
         top = self.stack[-1]
 
-        # Try to reduce integer literals
         # Skip if already reduced
         if isinstance(top, tuple):
             return False
 
+        # Try to reduce integer literals
         if top.isdigit():
             self.stack.pop()
             self.stack.append(("Expr", Int(int(top))))
             self.debug_print(f"Reduced integer: {top}")
             return True
 
+        # Try to reduce boolean literals
+        if top in ["True", "False"]:
+            self.stack.pop()
+            self.stack.append(("Expr", Bool(top == "True")))
+            self.debug_print(f"Reduced boolean: {top}")
+            return True
+
         # Try to reduce identifiers, but not keywords or special chars
-        if top.isalnum() and not top.isdigit() and top not in ["let", "in", "λ"]:
+        if top.isalnum() and not top.isdigit() and top not in ["let", "in", "λ", "True", "False"]:
             self.stack.pop()
             self.stack.append(("IDENTIFIER", top))
             self.debug_print(f"Reduced identifier: {top}")
@@ -104,6 +118,16 @@ class FunctionalParser:
         """
         if len(self.stack) < 2:
             return False
+
+        # Try to reduce unary not operator: ! e -> UnaryOp
+        if len(self.stack) >= 2:
+            if (self.stack[-2] == "!" and
+                isinstance(self.stack[-1], tuple) and self.stack[-1][0] == "Expr"):
+                _, expr = self.stack[-1]
+                self.stack = self.stack[:-2]
+                self.stack.append(("Expr", UnaryOp("!", expr)))
+                self.debug_print(f"Reduced not: !{expr}")
+                return True
 
         # Try to reduce lambda expressions: λ x . e -> Lambda
         if len(self.stack) >= 4:
@@ -169,10 +193,10 @@ class FunctionalParser:
                 self.debug_print(f"Reduced parenthesized expression: ({expr})")
                 return True
 
-        # Try to reduce arithmetic expressions
+        # Try to reduce arithmetic and boolean expressions
         if len(self.stack) >= 3:
             if (isinstance(self.stack[-3], tuple) and self.stack[-3][0] == "Expr" and
-                self.stack[-2] in ["+", "-", "*", "/"] and
+                self.stack[-2] in ["+", "-", "*", "/", "&", "|"] and
                 isinstance(self.stack[-1], tuple) and self.stack[-1][0] == "Expr"):
 
                 _, left = self.stack[-3]
@@ -180,7 +204,7 @@ class FunctionalParser:
                 _, right = self.stack[-1]
                 self.stack = self.stack[:-3]
                 self.stack.append(("Expr", BinOp(op, left, right)))
-                self.debug_print(f"Reduced arithmetic: {left} {op} {right}")
+                self.debug_print(f"Reduced binary operation: {left} {op} {right}")
                 return True
 
         # Reduce basic expressions (integers and identifiers)

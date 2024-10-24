@@ -184,11 +184,14 @@ def infer_j(expr, ctx: Dict[str, Forall]) -> MonoType:
     The type inference rules:
     1. Variables: Look up their type scheme in the context
     2. Integers: Have type 'int'
-    3. Functions: Create fresh type variable for argument,
+    3. Booleans: Have type 'bool'
+    4. Functions: Create fresh type variable for argument,
                  infer body type in extended context
-    4. Applications: Infer function and argument types,
+    5. Applications: Infer function and argument types,
                     ensure function type matches argument
-    5. Let bindings: Infer value type, extend context, infer body
+    6. Let bindings: Infer value type, extend context, infer body
+    7. Binary operations: Handle both arithmetic and boolean operations
+    8. Unary operations: Handle boolean not operation
     """
     result = fresh_tyvar()
 
@@ -202,6 +205,10 @@ def infer_j(expr, ctx: Dict[str, Forall]) -> MonoType:
     elif isinstance(expr, Int):
         # Integer literals always have type 'int'
         unify_j(result, IntType)
+
+    elif isinstance(expr, Bool):
+        # Boolean literals always have type 'bool'
+        unify_j(result, BoolType)
 
     elif isinstance(expr, Function):
         # For a function λx.e:
@@ -238,15 +245,37 @@ def infer_j(expr, ctx: Dict[str, Forall]) -> MonoType:
         unify_j(result, body_type)
 
     elif isinstance(expr, BinOp):
-        # For arithmetic operations:
+        # For binary operations:
         # 1. Infer types of both operands
         left_type = infer_j(expr.left, ctx)
         right_type = infer_j(expr.right, ctx)
-        # 2. Ensure both operands are integers
-        unify_j(left_type, IntType)
-        unify_j(right_type, IntType)
-        # 3. Result is also an integer
-        unify_j(result, IntType)
+
+        # 2. Handle arithmetic vs boolean operations
+        if expr.op in ["+", "-", "*", "/"]:
+            # Arithmetic operations require integers
+            unify_j(left_type, IntType)
+            unify_j(right_type, IntType)
+            unify_j(result, IntType)
+        elif expr.op in ["&", "|"]:
+            # Boolean operations require booleans
+            unify_j(left_type, BoolType)
+            unify_j(right_type, BoolType)
+            unify_j(result, BoolType)
+        else:
+            raise Exception(f"Unknown binary operator: {expr.op}")
+
+    elif isinstance(expr, UnaryOp):
+        # For unary operations (currently only boolean not):
+        # 1. Infer type of operand
+        operand_type = infer_j(expr.operand, ctx)
+
+        # 2. Handle not operation
+        if expr.op == "!":
+            # Not operation requires boolean operand
+            unify_j(operand_type, BoolType)
+            unify_j(result, BoolType)
+        else:
+            raise Exception(f"Unknown unary operator: {expr.op}")
 
     else:
         raise Exception(f"Unknown expression type: {type(expr)}")
@@ -264,6 +293,8 @@ class ASTNode:
             return f'Var("{self.name}")'
         elif isinstance(self, Int):
             return f'Int({self.value})'
+        elif isinstance(self, Bool):
+            return f'Bool({self.value})'
         elif isinstance(self, Function):
             return f'Function({self.arg.raw_structure()}, {self.body.raw_structure()})'
         elif isinstance(self, Apply):
@@ -272,6 +303,8 @@ class ASTNode:
             return f'Let({self.name.raw_structure()}, {self.value.raw_structure()}, {self.body.raw_structure()})'
         elif isinstance(self, BinOp):
             return f'BinOp("{self.op}", {self.left.raw_structure()}, {self.right.raw_structure()})'
+        elif isinstance(self, UnaryOp):
+            return f'UnaryOp("{self.op}", {self.operand.raw_structure()})'
         return str(self)
 
 @dataclasses.dataclass
@@ -292,6 +325,17 @@ class Int(ASTNode):
     Example: 42
     """
     value: int
+
+    def __repr__(self):
+        return str(self.value)
+
+@dataclasses.dataclass
+class Bool(ASTNode):
+    """
+    Represents a boolean literal.
+    Example: True, False
+    """
+    value: bool
 
     def __repr__(self):
         return str(self.value)
@@ -337,15 +381,27 @@ class Let(ASTNode):
 @dataclasses.dataclass
 class BinOp(ASTNode):
     """
-    Represents binary arithmetic operations (+, -, *, /).
-    Example: x + y
+    Represents binary operations (+, -, *, /, &, |).
+    Example: x + y, a & b
     """
-    op: str  # One of: '+', '-', '*', '/'
+    op: str  # One of: '+', '-', '*', '/', '&', '|'
     left: Any
     right: Any
 
     def __repr__(self):
         return f"({self.left} {self.op} {self.right})"
+
+@dataclasses.dataclass
+class UnaryOp(ASTNode):
+    """
+    Represents unary operations (!).
+    Example: !x
+    """
+    op: str  # Currently only '!'
+    operand: Any
+
+    def __repr__(self):
+        return f"{self.op}{self.operand}"
 
 # Type Variable Generation
 
@@ -385,6 +441,15 @@ def test_int():
     expr = Int(42)
     inferred_type = infer_j(expr, ctx)
     print(f"Integer literal: {expr}")
+    print(f"Raw AST structure: {expr.raw_structure()}")
+    print(f"Inferred type: {inferred_type}\n")
+
+def test_bool():
+    """Test type inference for boolean literals"""
+    ctx = {}
+    expr = Bool(True)
+    inferred_type = infer_j(expr, ctx)
+    print(f"Boolean literal: {expr}")
     print(f"Raw AST structure: {expr.raw_structure()}")
     print(f"Inferred type: {inferred_type}\n")
 
@@ -456,26 +521,50 @@ def test_arithmetic():
     print(f"Raw AST structure: {expr3.raw_structure()}")
     print(f"Inferred type: {type3}\n")
 
-def test_double():
+def test_boolean():
     """
-    Test type inference for let and λ bindings with double application.
-    This demonstrates how we can bind the identity function and use it.
+    Test type inference for boolean operations.
+    All boolean operations should work with booleans and produce booleans.
     """
     ctx = {}
-    # let double = λx.x*2 in (double 21)
-    expr = Let(Var("double"), Function(Var("x"), BinOp("*", Var("x"), Int(2))), Apply(Var("double"), Int(21)))
-    inferred_type = infer_j(expr, ctx)
-    print(f"Let binding: {expr}")
-    print(f"Raw AST structure: {expr.raw_structure()}")
-    print(f"Inferred type: {inferred_type}\n")
+    # Test and
+    expr1 = BinOp("&", Bool(True), Bool(False))
+    type1 = infer_j(expr1, ctx)
+    print(f"And: {expr1}")
+    print(f"Raw AST structure: {expr1.raw_structure()}")
+    print(f"Inferred type: {type1}\n")
+
+    # Test or
+    expr2 = BinOp("|", Bool(True), Bool(False))
+    type2 = infer_j(expr2, ctx)
+    print(f"Or: {expr2}")
+    print(f"Raw AST structure: {expr2.raw_structure()}")
+    print(f"Inferred type: {type2}\n")
+
+    # Test not
+    expr3 = UnaryOp("!", Bool(True))
+    type3 = infer_j(expr3, ctx)
+    print(f"Not: {expr3}")
+    print(f"Raw AST structure: {expr3.raw_structure()}")
+    print(f"Inferred type: {type3}\n")
+
+    # Test complex boolean expression
+    expr4 = BinOp("|",
+                  BinOp("&", Bool(True), Bool(False)),
+                  UnaryOp("!", Bool(True)))
+    type4 = infer_j(expr4, ctx)
+    print(f"Complex boolean: {expr4}")
+    print(f"Raw AST structure: {expr4.raw_structure()}")
+    print(f"Inferred type: {type4}\n")
 
 if __name__ == "__main__":
     # Run all test cases
     print("Type Inference Examples:\n")
     test_var()
     test_int()
+    test_bool()
     test_identity_function()
     test_function_application()
     test_let_binding()
     test_arithmetic()
-    test_double()
+    test_boolean()

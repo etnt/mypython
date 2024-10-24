@@ -24,7 +24,7 @@ Example Core Erlang output:
 
 from typing import Any, Dict, List
 from mfl_type_checker import (
-    Var, Int, Function, Apply, Let, BinOp,
+    Var, Int, Bool, Function, Apply, Let, BinOp,
     MonoType, TyCon, TyVar
 )
 
@@ -54,6 +54,8 @@ class CoreErlangGenerator:
         """
         if isinstance(node, Int):
             return self.generate_int(node)
+        elif isinstance(node, Bool):
+            return self.generate_bool(node)
         elif isinstance(node, Var):
             return self.generate_var(node)
         elif isinstance(node, Function):
@@ -70,6 +72,10 @@ class CoreErlangGenerator:
     def generate_int(self, node: Int) -> str:
         """Generate Core Erlang code for integer literal"""
         return str(node.value)
+
+    def generate_bool(self, node: Bool) -> str:
+        """Generate Core Erlang code for boolean literal"""
+        return "'true'" if node.value else "'false'"
 
     def generate_var(self, node: Var) -> str:
         """
@@ -124,7 +130,10 @@ class CoreErlangGenerator:
             "+": "'+'",
             "-": "'-'", 
             "*": "'*'",
-            "/": "'div'"  # Integer division in Core Erlang
+            "/": "'div'",  # Integer division in Core Erlang
+            "&": "'and'",
+            "|": "'or'",
+            "!": "'not'"
         }
 
         left = self.generate(node.left)
