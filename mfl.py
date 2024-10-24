@@ -48,8 +48,8 @@ def main():
                     try:
                         # Execute using SECD machine
                         from mfl_secd import execute_ast
-                        result = execute_ast(ast)
-                        print(f"\nSECD machine result: {result}")
+                        result = execute_ast(ast, args.verbose)
+                        print(f"SECD machine result: {result}")
                     except Exception as e:
                         print(f"Error executing with SECD machine: {e}")
                 else:

@@ -65,12 +65,18 @@ class SECDMachine:
     - dump: Stack of saved machine states for returning from function calls
     """
 
-    def __init__(self):
+    def __init__(self, verbose: bool = False):
         """Initialize SECD machine with empty registers."""
+        self.verbose = verbose
         self.stack: List[Value] = []
         self.env: Env = []
         self.control: Control = []
         self.dump: Dump = []
+
+    def debug_print(self, message: str) -> None:
+        """Print debug message if verbose mode is enabled."""
+        if self.verbose:
+            print(message)
 
     def run(self, control: Control) -> Optional[Value]:
         """
@@ -104,9 +110,9 @@ class SECDMachine:
             op = instruction
             arg = None
 
-        print(f"\nExecuting: {op} {arg if arg else ''}")
-        print(f"Stack before: {self.stack}")
-        print(f"Env before: {self.env}")
+        self.debug_print(f"\nExecuting: {op} {arg if arg else ''}")
+        self.debug_print(f"Stack before: {self.stack}")
+        self.debug_print(f"Env before: {self.env}")
 
         if op == "NIL":
             # Push empty list onto stack
@@ -212,7 +218,7 @@ class SECDMachine:
             self.stack = []
             self.env[0] = args
             self.control = closure.body
-            
+
         elif op == "LET":
             # Create new environment frame with binding
             value = self.stack.pop()
@@ -221,54 +227,56 @@ class SECDMachine:
             new_frame[bind_idx] = value
             self.env = [new_frame] + self.env
 
-def compile_ast(ast, env_map=None, level=0):
+def compile_ast(ast, env_map=None, level=0, verbose=False):
     """
     Compile AST to SECD machine instructions.
-    
+
     Args:
         ast: AST node from the parser
         env_map: Dictionary mapping variable names to (level, index) pairs
         level: Current nesting level for environment indexing
-        
+
     Returns:
         List of SECD machine instructions
     """
     if env_map is None:
         env_map = {}
-    
-    print(f"\nCompiling node: {type(ast).__name__}")
-    print(f"Current env_map: {env_map}")
-    print(f"Current level: {level}")
+
+    # print(f"\nCompiling node: {type(ast).__name__}")
+    # print(f"Current env_map: {env_map}")
+    # print(f"Current level: {level}")
 
     if isinstance(ast, Int):
         return [("LDC", ast.value)]
-        
+
     elif isinstance(ast, Bool):
         return [("LDC", ast.value)]
-        
+
     elif isinstance(ast, Var):
         if ast.name not in env_map:
             raise ValueError(f"Unbound variable: {ast.name}")
         return [("LD", env_map[ast.name])]
-        
+
     elif isinstance(ast, Function):
         # Create new environment for function body
         new_env_map = env_map.copy()
         param_idx = 0
-        print(f"Function AST: {ast}")
-        print(f"Function AST dir: {dir(ast)}")
-        print(f"Function AST vars: {vars(ast)}")
-        new_env_map[ast.arg.name] = (0, param_idx)
         
+        if verbose:
+            print(f"Function AST: {ast}")
+            print(f"Function AST dir: {dir(ast)}")
+            print(f"Function AST vars: {vars(ast)}")
+        new_env_map[ast.arg.name] = (0, param_idx)
+
         # Shift existing variables one level up
         for var in env_map:
             lvl, idx = env_map[var]
             new_env_map[var] = (lvl + 1, idx)
-            
+
         # Compile function body with new environment
         body_code = compile_ast(ast.body, new_env_map, level + 1)
         return [("LDF", body_code + ["RET"])]
-        
+
     elif isinstance(ast, Apply):
         # Compile function and argument
         func_code = compile_ast(ast.func, env_map, level)
@@ -280,33 +288,33 @@ def compile_ast(ast, env_map=None, level=0):
             *func_code,
             "AP"
         ]
-        
+
     elif isinstance(ast, Let):
         # The Let AST node structure is: Let(name, value, body) where name is a Var node
         var_name = ast.name.name  # First get the Var node, then its name attribute
-        
+
         # Compile the value to be bound
         value_code = compile_ast(ast.value, env_map, level)
-        
+
         # Create new environment for let body
         new_env_map = env_map.copy()
         bind_idx = len(env_map)
         new_env_map[var_name] = (0, bind_idx)
-        
+
         # Compile body with new binding
         body_code = compile_ast(ast.body, new_env_map, level)
-        
+
         return [
             *value_code,
             ("LET", bind_idx),  # Create new environment frame with binding
             *body_code
         ]
-        
+
     elif isinstance(ast, BinOp):
         # Compile operands
         left_code = compile_ast(ast.left, env_map, level)
         right_code = compile_ast(ast.right, env_map, level)
-        
+
         # Map operators to SECD instructions
         op_map = {
             "+": "ADD",
@@ -316,13 +324,13 @@ def compile_ast(ast, env_map=None, level=0):
             "&": "AND",
             "|": "OR"
         }
-        
+
         return [
             *left_code,
             *right_code,
             op_map[ast.op]
         ]
-        
+
     elif isinstance(ast, UnaryOp):
         if ast.op == "!":
             expr_code = compile_ast(ast.expr)
@@ -330,32 +338,32 @@ def compile_ast(ast, env_map=None, level=0):
                 *expr_code,
                 "NOT"
             ]
-            
+
     raise ValueError(f"Unknown AST node type: {type(ast)}")
 
-def execute_ast(ast):
+def execute_ast(ast, verbose=False):
     """
     Execute an AST using the SECD machine.
-    
+
     Args:
         ast: AST node from the parser
-        
+
     Returns:
         Final value from the stack
     """
     # Compile AST to instructions
-    instructions = compile_ast(ast, {}, 0)
-    
+    instructions = compile_ast(ast, {}, 0, verbose)
+
     # Create and run SECD machine
-    machine = SECDMachine()
+    machine = SECDMachine(verbose)
     return machine.run(instructions)
 
 if __name__ == "__main__":
     # Example usage
     from mfl_type_checker import Int, BinOp
-    
+
     # Create AST for: 5 + 3
     ast = BinOp("+", Int(5), Int(3))
-    
+
     result = execute_ast(ast)
     print(f"Result: {result}")  # Output: 8
