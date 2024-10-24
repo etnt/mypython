@@ -30,9 +30,11 @@ Grammar Rules:
 
 Example Usage:
     python3 functional_parser.py "let id = λx.x in (id 42)"
+    python3 functional_parser.py -v "let id = λx.x in (id 42)"  # verbose mode
 """
 
 import sys
+import argparse
 from typing import List, Dict, Any
 from type_system import (
     Var, Int, Function, Apply, Let, BinOp,
@@ -44,11 +46,17 @@ class FunctionalParser:
     A shift-reduce parser for functional programming constructs.
     """
 
-    def __init__(self, grammar_rules, terminal_rules):
+    def __init__(self, grammar_rules, terminal_rules, verbose=False):
         self.grammar_rules = grammar_rules
         self.terminal_rules = terminal_rules
         self.stack = []
         self.buffer = []
+        self.verbose = verbose
+
+    def debug_print(self, *args, **kwargs):
+        """Helper method for conditional printing"""
+        if self.verbose:
+            print(*args, **kwargs)
 
     def tokenize(self, input_str: str) -> List[str]:
         """
@@ -79,14 +87,14 @@ class FunctionalParser:
         if top.isdigit():
             self.stack.pop()
             self.stack.append(("Expr", Int(int(top))))
-            print(f"Reduced integer: {top}")
+            self.debug_print(f"Reduced integer: {top}")
             return True
 
         # Try to reduce identifiers, but not keywords or special chars
         if top.isalnum() and not top.isdigit() and top not in ["let", "in", "λ"]:
             self.stack.pop()
             self.stack.append(("IDENTIFIER", top))
-            print(f"Reduced identifier: {top}")
+            self.debug_print(f"Reduced identifier: {top}")
             return True
 
         return False
@@ -97,7 +105,6 @@ class FunctionalParser:
         """
         if len(self.stack) < 2:
             return False
-
 
         # Try to reduce lambda expressions: λ x . e -> Lambda
         if len(self.stack) >= 4:
@@ -114,7 +121,7 @@ class FunctionalParser:
                 _, body = self.stack[-1]
                 self.stack = self.stack[:-4]
                 self.stack.append(("Expr", Function(var_expr, body)))
-                print(f"Reduced lambda: λ{var_expr}.{body}")
+                self.debug_print(f"Reduced lambda: λ{var_expr}.{body}")
                 return True
 
         # Try to reduce function application: ( e1 e2 ) -> Apply
@@ -128,7 +135,7 @@ class FunctionalParser:
                 _, arg = self.stack[-2]
                 self.stack = self.stack[:-4]
                 self.stack.append(("Expr", Apply(func, arg)))
-                print(f"Reduced application: ({func} {arg})")
+                self.debug_print(f"Reduced application: ({func} {arg})")
                 return True
 
         # Try to reduce let expressions: let x = e1 in e2 -> Let
@@ -149,7 +156,7 @@ class FunctionalParser:
                 _, body = self.stack[-1]
                 self.stack = self.stack[:-6]
                 self.stack.append(("Expr", Let(var_expr, value, body)))
-                print(f"Reduced let: let {var_expr} = {value} in {body}")
+                self.debug_print(f"Reduced let: let {var_expr} = {value} in {body}")
                 return True
 
         # Try to reduce parenthesized expressions
@@ -160,7 +167,7 @@ class FunctionalParser:
                 _, expr = self.stack[-2]
                 self.stack = self.stack[:-3]
                 self.stack.append(("Expr", expr))
-                print(f"Reduced parenthesized expression: ({expr})")
+                self.debug_print(f"Reduced parenthesized expression: ({expr})")
                 return True
 
         # Try to reduce arithmetic expressions
@@ -174,7 +181,7 @@ class FunctionalParser:
                 _, right = self.stack[-1]
                 self.stack = self.stack[:-3]
                 self.stack.append(("Expr", BinOp(op, left, right)))
-                print(f"Reduced arithmetic: {left} {op} {right}")
+                self.debug_print(f"Reduced arithmetic: {left} {op} {right}")
                 return True
 
         # Reduce basic expressions (integers and identifiers)
@@ -184,18 +191,18 @@ class FunctionalParser:
                 if top[0] == "INT_LITERAL":
                     self.stack.pop()
                     self.stack.append(("Expr", Int(top[1])))
-                    print(f"Reduced to Expr: {top[1]}")
+                    self.debug_print(f"Reduced to Expr: {top[1]}")
                     return True
                 elif top[0] == "IDENTIFIER":
                     self.stack.pop()
                     self.stack.append(("Expr", Var(top[1])))
-                    print(f"Reduced to Expr: {top[1]}")
+                    self.debug_print(f"Reduced to Expr: {top[1]}")
                     return True
             # Handle raw integers that haven't been converted to INT_LITERAL yet
             elif isinstance(top, str) and top.isdigit():
                 self.stack.pop()
                 self.stack.append(("Expr", Int(int(top))))
-                print(f"Reduced integer directly to Expr: {top}")
+                self.debug_print(f"Reduced integer directly to Expr: {top}")
                 return True
 
         return False
@@ -206,11 +213,11 @@ class FunctionalParser:
         """
         self.buffer = self.tokenize(input_str)
         self.stack = []
-        print(f"\nParsing: {input_str}")
+        self.debug_print(f"\nParsing: {input_str}")
 
         while True:
-            print(f"\nStack: {self.stack}")
-            print(f"Buffer: {self.buffer}")
+            self.debug_print(f"\nStack: {self.stack}")
+            self.debug_print(f"Buffer: {self.buffer}")
 
             # Try reductions
             while self.try_terminal_reduction() or self.try_grammar_reduction():
@@ -220,7 +227,7 @@ class FunctionalParser:
             if self.buffer:
                 next_token = self.buffer.pop(0)
                 self.stack.append(next_token)
-                print(f"Shifted: {next_token}")
+                self.debug_print(f"Shifted: {next_token}")
             else:
                 # No more input and no reductions possible
                 if len(self.stack) == 1 and isinstance(self.stack[0], tuple) and self.stack[0][0] == "Expr":
@@ -233,25 +240,30 @@ def main():
     """
     Main function that handles command-line input and runs the parser.
     """
-    parser = FunctionalParser([], {})  # Grammar rules handled in reduction methods
+    # Set up argument parser
+    arg_parser = argparse.ArgumentParser(description='Parse and type-check functional programming expressions.')
+    arg_parser.add_argument('expression', nargs='?', help='Expression to parse and type-check')
+    arg_parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
+    args = arg_parser.parse_args()
+
+    parser = FunctionalParser([], {}, verbose=args.verbose)  # Grammar rules handled in reduction methods
 
     # If expression is provided as command-line argument, use it
-    if len(sys.argv) > 1:
-        expr_str = ' '.join(sys.argv[1:])
+    if args.expression:
         try:
-            ast = parser.parse(expr_str)
-            print(f"\nAST: {ast}")
+            ast = parser.parse(args.expression)
+            print(f"AST: {ast}")
 
             # Type check the parsed expression
             type_ctx = {}  # Empty typing context
             try:
                 expr_type = infer_j(ast, type_ctx)
-                print(f"Inferred type: {expr_type}\n")
+                print(f"Inferred type: {expr_type}")
             except Exception as e:
-                print(f"Type error: {str(e)}\n")
+                print(f"Type error: {str(e)}")
 
         except ValueError as e:
-            print(f"Parse error: {str(e)}\n")
+            print(f"Parse error: {str(e)}")
     else:
         # Default test expressions
         test_exprs = [
@@ -268,7 +280,7 @@ def main():
             print("\n" + "="*50)
             try:
                 ast = parser.parse(expr_str)
-                print(f"\nAST: {ast}")
+                print(f"AST: {ast}")
 
                 # Type check the parsed expression
                 type_ctx = {}
