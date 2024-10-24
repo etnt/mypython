@@ -56,3 +56,16 @@ Each program can be run independently. Most programs include example usage in th
 ```bash
 python3 <program_name>.py
 ```
+
+The `functional_parser.py` can be run with an argument or without, where in the latter case it will run the default test cases.
+It also takes a `-v`/`--verbose` flag to print the parsing steps.
+
+Example:
+
+```bash
+❯ ./venv/bin/python3 functional_parser.py "let double = λx.(x*2) in (double 21)"
+Successfully parsed!
+AST: let double = λx.(x * 2) in (double 21)
+AST(raw): Let(Var("double"), Function(Var("x"), BinOp("*", Var("x"), Int(2))), Apply(Var("double"), Int(21)))
+Inferred type: int
+```

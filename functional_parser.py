@@ -253,6 +253,7 @@ def main():
         try:
             ast = parser.parse(args.expression)
             print(f"AST: {ast}")
+            print(f"AST(raw): {ast.raw_structure()}")
 
             # Type check the parsed expression
             type_ctx = {}  # Empty typing context
@@ -272,7 +273,8 @@ def main():
             "(λx.x 42)",
             "let id = λx.x in (id 42)",
             "(2 + 3)",
-            "let x = 5 in (x * 3)"
+            "let x = 5 in (x * 3)",
+            "let double = λx.(x*2) in (double 21)"
         ]
 
         print("No expression provided. Running test cases...")
@@ -281,6 +283,7 @@ def main():
             try:
                 ast = parser.parse(expr_str)
                 print(f"AST: {ast}")
+                print(f"AST(raw): {ast.raw_structure()}")
 
                 # Type check the parsed expression
                 type_ctx = {}
