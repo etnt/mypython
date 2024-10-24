@@ -26,6 +26,7 @@ def main():
     arg_parser.add_argument('expression', nargs='?', help='Expression to parse and type-check')
     arg_parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
     arg_parser.add_argument('-o', '--output', default="mfl.core", help='Output file name')
+    arg_parser.add_argument('-s', '--secd', action='store_true', help='Execute using SECD machine instead of generating Core Erlang')
     args = arg_parser.parse_args()
 
     parser = FunctionalParser([], {}, verbose=args.verbose)  # Grammar rules handled in reduction methods
@@ -43,28 +44,34 @@ def main():
                 expr_type = infer_j(ast, type_ctx)
                 print(f"Inferred type: {expr_type}")
 
-                # Generate Core Erlang code
-                core_erlang = generate_core_erlang(ast, expr_type)
-                if args.verbose:
-                    print("\nGenerated Core Erlang code:")
-                    print(core_erlang)
-                # Write the generated code to file
-                with open(args.output, "w") as f:
-                    f.write(core_erlang)
-                print(f"Output written to: {args.output} ,compiling to BEAM as: erlc +from_core {args.output}")
-                try:
-                    # Use shlex.quote to safely handle filenames with spaces or special characters
-                    command = shlex.split(f"erlc +from_core {shlex.quote(args.output)}")
-                    result = subprocess.run(command, capture_output=True, text=True, check=True)
-                    print("Compilation successful!")
-                    print(result.stdout)  # Print compilation output (if any)
-                except subprocess.CalledProcessError as e:
-                    print(f"Error compiling with erlc: {e}")
-                    print(f"Return code: {e.returncode}")
-                    print(f"Stdout: {e.stdout}")
-                    print(f"Stderr: {e.stderr}")
-                except FileNotFoundError:
-                    print("Error: erlc command not found. Make sure it's in your PATH.")
+                if args.secd:
+                    # Execute using SECD machine
+                    from mfl_secd import execute_ast
+                    result = execute_ast(ast)
+                    print(f"\nSECD machine result: {result}")
+                else:
+                    # Generate Core Erlang code
+                    core_erlang = generate_core_erlang(ast, expr_type)
+                    if args.verbose:
+                        print("\nGenerated Core Erlang code:")
+                        print(core_erlang)
+                    # Write the generated code to file
+                    with open(args.output, "w") as f:
+                        f.write(core_erlang)
+                    print(f"Output written to: {args.output} ,compiling to BEAM as: erlc +from_core {args.output}")
+                    try:
+                        # Use shlex.quote to safely handle filenames with spaces or special characters
+                        command = shlex.split(f"erlc +from_core {shlex.quote(args.output)}")
+                        result = subprocess.run(command, capture_output=True, text=True, check=True)
+                        print("Compilation successful!")
+                        print(result.stdout)  # Print compilation output (if any)
+                    except subprocess.CalledProcessError as e:
+                        print(f"Error compiling with erlc: {e}")
+                        print(f"Return code: {e.returncode}")
+                        print(f"Stdout: {e.stdout}")
+                        print(f"Stderr: {e.stderr}")
+                    except FileNotFoundError:
+                        print("Error: erlc command not found. Make sure it's in your PATH.")
 
             except Exception as e:
                 print(f"Error during type checking/code generation: {str(e)}")
