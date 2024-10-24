@@ -11,6 +11,8 @@ Example Usage:
 """
 
 import argparse
+import subprocess
+import shlex  # For safe shell command construction
 from mfl_parser import FunctionalParser
 from mfl_type_checker import infer_j
 from mfl_core_erlang_generator import generate_core_erlang
@@ -49,7 +51,21 @@ def main():
                 # Write the generated code to file
                 with open(args.output, "w") as f:
                     f.write(core_erlang)
-                print(f"Output written to: {args.output} ,compile to BEAM as: erlc +from_core {args.output}")
+                print(f"Output written to: {args.output} ,compiling to BEAM as: erlc +from_core {args.output}")
+                try:
+                    # Use shlex.quote to safely handle filenames with spaces or special characters
+                    command = shlex.split(f"erlc +from_core {shlex.quote(args.output)}")
+                    result = subprocess.run(command, capture_output=True, text=True, check=True)
+                    print("Compilation successful!")
+                    print(result.stdout)  # Print compilation output (if any)
+                except subprocess.CalledProcessError as e:
+                    print(f"Error compiling with erlc: {e}")
+                    print(f"Return code: {e.returncode}")
+                    print(f"Stdout: {e.stdout}")
+                    print(f"Stderr: {e.stderr}")
+                except FileNotFoundError:
+                    print("Error: erlc command not found. Make sure it's in your PATH.")
+
             except Exception as e:
                 print(f"Error during type checking/code generation: {str(e)}")
 
