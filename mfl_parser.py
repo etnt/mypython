@@ -132,13 +132,17 @@ class FunctionalParser:
         # Try to reduce lambda expressions: λ x . e -> Lambda
         if len(self.stack) >= 4:
             if (self.stack[-4] == "λ" and 
-                isinstance(self.stack[-3], tuple) and self.stack[-3][0] == "Expr" and
+                isinstance(self.stack[-3], tuple) and 
                 self.stack[-2] == "." and
                 isinstance(self.stack[-1], tuple) and self.stack[-1][0] == "Expr"):
 
-                # Extract the variable from the first Expr (which should be a Var)
+                # Extract the variable name
                 _, var_expr = self.stack[-3]
-                if not isinstance(var_expr, Var):
+                if isinstance(var_expr, str):
+                    var_expr = Var(var_expr)
+                elif isinstance(var_expr, Var):
+                    pass
+                else:
                     return False
 
                 _, body = self.stack[-1]
@@ -147,19 +151,37 @@ class FunctionalParser:
                 self.debug_print(f"Reduced lambda: λ{var_expr}.{body}")
                 return True
 
-        # Try to reduce function application: ( e1 e2 ) -> Apply
+        # Try to reduce function application: ( e1 e2 ... en ) -> Apply
         if len(self.stack) >= 4:
-            if (self.stack[-4] == "(" and
-                isinstance(self.stack[-3], tuple) and self.stack[-3][0] == "Expr" and
-                isinstance(self.stack[-2], tuple) and self.stack[-2][0] == "Expr" and
-                self.stack[-1] == ")"):
-
-                _, func = self.stack[-3]
-                _, arg = self.stack[-2]
-                self.stack = self.stack[:-4]
-                self.stack.append(("Expr", Apply(func, arg)))
-                self.debug_print(f"Reduced application: ({func} {arg})")
-                return True
+            if (self.stack[-1] == ")" and
+                any(item == "(" for item in self.stack)):
+                # Find the matching opening parenthesis
+                depth = 1
+                pos = -2
+                while depth > 0 and abs(pos) <= len(self.stack):
+                    if self.stack[pos] == ")":
+                        depth += 1
+                    elif self.stack[pos] == "(":
+                        depth -= 1
+                    pos -= 1
+                pos += 1  # Adjust for last decrement
+                
+                if depth == 0:
+                    # Extract all expressions between parentheses
+                    exprs = []
+                    for item in self.stack[pos+1:-1]:
+                        if isinstance(item, tuple) and item[0] == "Expr":
+                            exprs.append(item[1])
+                    
+                    if len(exprs) >= 2:
+                        # Fold multiple applications from left to right
+                        result = exprs[0]
+                        for arg in exprs[1:]:
+                            result = Apply(result, arg)
+                        
+                        self.stack = self.stack[:pos] + [("Expr", result)]
+                        self.debug_print(f"Reduced application: {result}")
+                        return True
 
         # Try to reduce let expressions: let x = e1 in e2 -> Let
         if len(self.stack) >= 6:

@@ -78,3 +78,19 @@ Compilation successful!
 1> mfl:main().
 42
 ```
+
+Another example:
+
+```bash
+❯ ./venv/bin/python3 mfl.py "let add = λx.λy.(x+y) in (add 3 4)"
+Successfully parsed!
+AST: let add = λx.λy.(x + y) in ((add 3) 4)
+AST(raw): Let(Var("add"), Function(Var("x"), Function(Var("y"), BinOp("+", Var("x"), Var("y")))), Apply(Apply(Var("add"), Int(3)), Int(4)))
+Inferred type: int
+Output written to: mfl.core ,compiling to BEAM as: erlc +from_core mfl.core
+Compilation successful!
+
+❯ erl
+1> mfl:main().
+7
+```
