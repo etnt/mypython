@@ -32,11 +32,15 @@ A comprehensive guide to Python's dataclasses, demonstrating how to use the @dat
 ### 9. MFL - Type Inference System (mfl_type_checker.py)
 An educational implementation of the Hindley-Milner type inference system, demonstrating how programming language type systems work. Includes polymorphic type inference, unification, and type checking with detailed documentation explaining core concepts.
 
-### 10. MFL - Parser (mfl__parser.py)
+### 10. MFL - Parser (mfl_parser.py)
 A shift-reduce parser for a simple functional programming language that supports lambda abstractions, function applications, let bindings, and arithmetic expressions. Integrates with the type inference system to provide static typing for parsed expressions.
 
-### 11. MFL -Generator (mfl_core_erlang_generator.py)
-A code generator that translates parsed and type-checked expressions into Erlang core language code. Supports lambda abstractions, function applications, let bindings, and arithmetic expressions.
+### 11. MFL - SECD Machine (mfl_secd.py)
+An implementation of the SECD (Stack, Environment, Control, Dump) virtual machine for evaluating lambda calculus expressions.
+The SECD machine serves as one of the execution backends for the MFL language, allowing direct interpretation of MFL expressions without compilation via Erlang Core.
+
+### 12. MFL - Core Erlang Generator (mfl_core_erlang_generator.py)
+A code generator that translates parsed and type-checked expressions into Erlang Core language code. Supports lambda abstractions, function applications, let bindings, and arithmetic expressions.
 
 ## Requirements
 
@@ -63,7 +67,7 @@ python3 <program_name>.py
 The `mfl.py` can be run with an argument or without, where in the latter case it will run the default test cases for the parser and type checker.
 It also takes a `-v`/`--verbose` flag to print the parsing steps.
 
-Example:
+Example, generating BEAM code:
 
 ```bash
 ❯ ./venv/bin/python3 mfl.py "let double = λx.(x*2) in (double 21)"
@@ -79,18 +83,13 @@ Compilation successful!
 42
 ```
 
-Another example:
+Another example, this time running our code in the SECD machine:
 
 ```bash
-❯ ./venv/bin/python3 mfl.py "let add = λx.λy.(x+y) in (add 3 4)"
+❯ ./venv/bin/python3 mfl.py -s "let add = λx.λy.(x+y) in (add 3 4)"
 Successfully parsed!
 AST: let add = λx.λy.(x + y) in ((add 3) 4)
 AST(raw): Let(Var("add"), Function(Var("x"), Function(Var("y"), BinOp("+", Var("x"), Var("y")))), Apply(Apply(Var("add"), Int(3)), Int(4)))
 Inferred type: int
-Output written to: mfl.core ,compiling to BEAM as: erlc +from_core mfl.core
-Compilation successful!
-
-❯ erl
-1> mfl:main().
-7
+SECD machine result: 7
 ```
