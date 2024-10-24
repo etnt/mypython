@@ -98,7 +98,7 @@ SECD machine result: 7
 Testing the type checker:
 
 ```bash
-❯ ./venv/bin/python3 mfl.py -s "let add = λx.λy.(x+y) in (add 3 4)"
+❯ ./venv/bin/python3 mfl.py -s "let add = λx.λy.(x+y) in (add 3 True)"
 Successfully parsed!
 AST: let add = λx.λy.(x + y) in ((add 3) True)
 AST(raw): Let(Var("add"), Function(Var("x"), Function(Var("y"), BinOp("+", Var("x"), Var("y")))), Apply(Apply(Var("add"), Int(3)), Bool(True))) 
